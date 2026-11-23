@@ -10,7 +10,27 @@ package mendoventura.model;
  */
 
 public class Pelanggan extends Pengguna {
-    public Pelanggan(String id, String nama, String password) {
+    private String kontak;
+
+    public Pelanggan(String id, String nama, String password, String kontak) {
         super(id, nama, password);
+        setKontak(kontak);
+    }
+
+    public String getKontak() {
+        return kontak;
+    }
+
+    public void setKontak(String kontak) {
+        if (kontak == null || kontak.isBlank()) {
+            throw new IllegalArgumentException("Nomor kontak pelanggan wajib diisi");
+        }
+        this.kontak = kontak;
+    }
+
+    @Override
+    public void tampilkanInfo() {
+        super.tampilkanInfo();
+        System.out.println("Kontak   : " + kontak);
     }
 }
