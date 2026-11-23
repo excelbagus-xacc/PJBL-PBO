@@ -152,7 +152,7 @@ public class Main {
         System.out.print("Masukkan nomor telepon/kontak: ");
         String kontak = input.nextLine();
         
-        Pelanggan pelanggan = new Pelanggan("P" + String.format("%03d", daftarSewa.size() + 1), namaPelanggan, kontak);
+        Pelanggan pelanggan = new Pelanggan("P" + String.format("%03d", daftarSewa.size() + 1), namaPelanggan, "123456", kontak);
 
         try {
             System.out.print("Tanggal mulai sewa (YYYY-MM-DD): "); 
