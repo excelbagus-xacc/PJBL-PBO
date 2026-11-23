@@ -26,6 +26,12 @@ public class Sewa {
     private double totalDenda;
 
     public Sewa(String kode, Pelanggan pelanggan, LocalDate tanggalSewa, LocalDate tanggalKembali) {
+        if (pelanggan == null) {
+            throw new IllegalArgumentException("Pelanggan wajib diisi");
+        }
+        if (tanggalSewa == null || tanggalKembali == null || !tanggalKembali.isAfter(tanggalSewa)) {
+            throw new IllegalArgumentException("Tanggal kembali harus setelah tanggal sewa");
+        }
         this.kode = kode;
         this.pelanggan = pelanggan;
         this.tanggalSewa = tanggalSewa;
@@ -35,8 +41,20 @@ public class Sewa {
         this.totalDenda = 0;
     }
 
-    public void tambahItem(Peralatan alat, int jumlah) { daftarItem.add(new ItemSewa(alat, jumlah)); }
-    public ArrayList<ItemSewa> getDaftarItem() { return daftarItem; }
+    public void tambahItem(Peralatan alat, int jumlah) {
+        if (status != StatusSewa.MENUNGGU_VERIFIKASI) {
+            throw new IllegalStateException("Item tidak dapat ditambah karena transaksi sudah diproses");
+        }
+        if (alat == null || !alat.isAktif()) {
+            throw new IllegalArgumentException("Alat tidak tersedia atau sedang nonaktif");
+        }
+        if (jumlah <= 0) {
+            throw new IllegalArgumentException("Jumlah unit sewa harus lebih dari 0");
+        }
+        daftarItem.add(new ItemSewa(alat, jumlah));
+    }
+
+    public ArrayList<ItemSewa> getDaftarItem() { return new ArrayList<>(daftarItem); }
     public StatusSewa getStatus() { return status; }
     public void ubahStatus(StatusSewa status) { this.status = status; }
     public String getKode() { return kode; }
@@ -46,30 +64,40 @@ public class Sewa {
     public String getBuktiBayar() { return buktiBayar; }
     public String getJaminan() { return jaminan; }
     public double getTotalDenda() { return totalDenda; }
+
     public void unggahBukti(String buktiBayar, String jaminan) {
+        if (buktiBayar == null || buktiBayar.isBlank() || jaminan == null || jaminan.isBlank()) {
+            throw new IllegalArgumentException("Bukti bayar dan jaminan wajib diisi");
+        }
         this.buktiBayar = buktiBayar;
         this.jaminan = jaminan;
     }
+
     public void catatPengembalian(LocalDate tanggalAktual) { this.tanggalAktualKembali = tanggalAktual; }
     public void tambahDenda(double denda) { if (denda > 0) totalDenda += denda; }
 
     public boolean tanggalBentrok(LocalDate mulai, LocalDate selesai) {
         return tanggalSewa.isBefore(selesai) && tanggalKembali.isAfter(mulai);
     }
+
     public int hitungLamaHari() {
         return (int) Math.max(1, ChronoUnit.DAYS.between(tanggalSewa, tanggalKembali));
     }
+
     public double hitungSubtotal() {
         double total = 0;
         for (ItemSewa item : daftarItem) total += item.getSubtotal(hitungLamaHari());
         return total;
     }
+
     public double hitungTotal() { return hitungSubtotal() + totalDenda; }
+
     public long hitungHariTerlambat(LocalDate tanggalAktualKembali) {
         if (tanggalAktualKembali.isAfter(tanggalKembali))
             return ChronoUnit.DAYS.between(tanggalKembali, tanggalAktualKembali);
         return 0;
     }
+
     public void tampilkan() {
         System.out.println("\nKode sewa: " + kode);
         System.out.println("Pelanggan: " + pelanggan.getNama());

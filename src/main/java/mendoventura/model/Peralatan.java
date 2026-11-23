@@ -19,6 +19,15 @@ public abstract class Peralatan {
 
     public Peralatan(String kode, String nama, String kategori,
                      double hargaPerHari, int stok) {
+        if (kode == null || kode.isBlank() || nama == null || nama.isBlank()) {
+            throw new IllegalArgumentException("Kode dan nama peralatan wajib diisi");
+        }
+        if (hargaPerHari <= 0) {
+            throw new IllegalArgumentException("Harga sewa per hari harus lebih dari 0");
+        }
+        if (stok < 0) {
+            throw new IllegalArgumentException("Stok awal tidak boleh negatif");
+        }
         this.kode = kode;
         this.nama = nama;
         this.kategori = kategori;
@@ -36,8 +45,7 @@ public abstract class Peralatan {
 
     public boolean ubahStok(int perubahan) {
         if (stok + perubahan < 0) {
-            System.out.println("Stok tidak boleh negatif.");
-            return false;
+            throw new IllegalStateException("Stok " + nama + " tidak mencukupi");
         }
         stok += perubahan;
         return true;
