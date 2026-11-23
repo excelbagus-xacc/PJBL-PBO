@@ -18,6 +18,10 @@ public class DendaTerlambat implements AturanDenda {
 
     @Override
     public double hitung(double hariTerlambat) {
+        if (hariTerlambat < 0) {
+            throw new IllegalArgumentException("Jumlah hari keterlambatan tidak boleh negatif.");
+        }
         return hariTerlambat * dendaPerHari;
-    }
-}
+    }}
+    
+    
