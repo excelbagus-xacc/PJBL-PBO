@@ -4,11 +4,12 @@
  */
 package mendoventura.model;
 
+import java.util.Objects;
+
 /**
  *
- * @author HP
+ * @author MyBook Hype AMD
  */
-
 public abstract class Peralatan {
     private String kode;
     private String nama;
@@ -57,5 +58,18 @@ public abstract class Peralatan {
 
     public void tampilkanInfo() {
         System.out.println(kode + " | " + nama + " | " + kategori + " | Rp" + hargaPerHari + "/hari | Stok: " + stok);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Peralatan)) return false;
+        Peralatan that = (Peralatan) o;
+        return Objects.equals(kode, that.kode);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(kode);
     }
 }

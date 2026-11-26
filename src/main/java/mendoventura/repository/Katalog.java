@@ -4,46 +4,41 @@
  */
 package mendoventura.repository;
 
-import mendoventura.model.Peralatan;
-
 /**
  *
- * @author HP
+ * @author MyBook Hype AMD
  */
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import mendoventura.model.Peralatan;
 
-/**
- * Katalog mengelola referensi objek Peralatan yang dibuat dari luar.
- * Peralatan tetap dapat hidup dan digunakan tanpa objek Katalog (agregasi).
- */
 public class Katalog {
-    private final ArrayList<Peralatan> daftarPeralatan;
+    private final Penyimpanan<Peralatan> daftarPeralatan;
+
+    public Katalog() {
+        this.daftarPeralatan = new Penyimpanan<>();
+    }
 
     public Katalog(ArrayList<Peralatan> daftarPeralatan) {
-        if (daftarPeralatan == null) {
-            throw new IllegalArgumentException("Daftar peralatan tidak boleh null.");
-        }
-        this.daftarPeralatan = daftarPeralatan;
+        this.daftarPeralatan = new Penyimpanan<>(daftarPeralatan);
     }
 
     public void tambahPeralatan(Peralatan peralatan) {
         if (peralatan != null) {
-            daftarPeralatan.add(peralatan);
+            daftarPeralatan.tambah(peralatan);
         }
     }
 
     public List<Peralatan> getDaftarPeralatan() {
-        return Collections.unmodifiableList(daftarPeralatan);
+        return daftarPeralatan.semua();
     }
 
     public Peralatan getPeralatan(int index) {
-        return daftarPeralatan.get(index);
+        return daftarPeralatan.ambil(index);
     }
 
     public int jumlahPeralatan() {
-        return daftarPeralatan.size();
+        return daftarPeralatan.jumlah();
     }
 }
