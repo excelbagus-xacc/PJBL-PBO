@@ -3,6 +3,8 @@ package mendoventura.service;
 import mendoventura.denda.DendaKehilangan;
 import mendoventura.denda.DendaKerusakan;
 import mendoventura.denda.DendaTerlambat;
+import mendoventura.exception.JadwalBentrokException;
+import mendoventura.exception.StokTidakCukupException;
 import mendoventura.model.Admin;
 import mendoventura.model.ItemSewa;
 import mendoventura.model.Kondisi;
@@ -46,7 +48,7 @@ public class SewaService {
             Pembayaran pembayaran,
             String buktiBayar,
             String jaminan
-    ) {
+    ) throws StokTidakCukupException, JadwalBentrokException {
         if (pelanggan == null) {
             throw new IllegalArgumentException("Data pelanggan tidak boleh kosong.");
         }
@@ -74,9 +76,14 @@ public class SewaService {
             if (alat == null || jumlah == null || jumlah <= 0) {
                 throw new IllegalArgumentException("Data alat atau jumlah unit tidak valid.");
             }
+            if (jumlah > alat.getStok()) {
+                throw new StokTidakCukupException(alat.getKode(), jumlah, alat.getStok());
+            }
             if (!ketersediaan.tersedia(alat, jumlah, tanggalMulai, tanggalSelesai)) {
-                throw new IllegalStateException("Stok alat " + alat.getNama()
-                        + " tidak mencukupi pada tanggal tersebut.");
+                throw new JadwalBentrokException(
+                        alat.getKode(),
+                        "Jadwal sewa alat " + alat.getNama() + " bentrok pada tanggal tersebut."
+                );
             }
 
             sewa.tambahItem(alat, jumlah);
@@ -132,7 +139,7 @@ public class SewaService {
             LocalDate tanggalAktual,
             Map<ItemSewa, Kondisi> kondisiPerItem,
             Map<ItemSewa, Double> biayaPerbaikanPerItem
-    ) {
+    ) throws StokTidakCukupException {
 
         // 1. Validasi transaksi
         if (sewa == null) {
@@ -242,10 +249,7 @@ public class SewaService {
             int jumlahHilang = entry.getValue();
 
             if (alat.getStok() < jumlahHilang) {
-                throw new IllegalStateException(
-                        "Stok " + alat.getNama()
-                        + " tidak mencukupi untuk mencatat kehilangan alat."
-                );
+                throw new StokTidakCukupException(alat.getKode(), jumlahHilang, alat.getStok());
             }
         }
 
