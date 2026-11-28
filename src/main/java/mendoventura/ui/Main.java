@@ -17,6 +17,8 @@ import mendoventura.payment.BayarTunai;
 import mendoventura.payment.Pembayaran;
 import mendoventura.repository.Katalog;
 import mendoventura.service.SewaService;
+import mendoventura.exception.JadwalBentrokException;
+import mendoventura.exception.StokTidakCukupException;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
@@ -134,6 +136,38 @@ public class Main {
         }
     }
 
+    private static Map<Peralatan, Integer> pilihKeranjangBelanja() {
+        Map<Peralatan, Integer> keranjangItem = new LinkedHashMap<>();
+        boolean tambahLagi = true;
+        while (tambahLagi) {
+            tampilkanKatalog();
+            System.out.print("Pilih nomor alat yang ingin disewa: ");
+            int nomor = bacaInt();
+
+            if (nomor < 1 || nomor > katalog.jumlahPeralatan()) {
+                System.out.println("Nomor alat tidak terdaftar.");
+            } else {
+                Peralatan alat = katalog.getPeralatan(nomor - 1);
+                if (!alat.isAktif()) {
+                    System.out.println("Alat sedang tidak aktif.");
+                } else {
+                    System.out.print("Masukkan jumlah unit yang disewa: ");
+                    int jumlah = bacaInt();
+                    if (jumlah <= 0) {
+                        System.out.println("Jumlah unit harus lebih dari 0.");
+                    } else {
+                        keranjangItem.put(alat, keranjangItem.getOrDefault(alat, 0) + jumlah);
+                        System.out.println("Berhasil menambahkan " + alat.getNama() + " (" + jumlah + " unit) ke keranjang.");
+                    }
+                }
+            }
+
+            System.out.print("Ingin tambah alat lain? (y/n): ");
+            tambahLagi = input.nextLine().equalsIgnoreCase("y");
+        }
+        return keranjangItem;
+    }
+
     private static void buatReservasiBaru() {
         try {
             System.out.println("\n--- FORMULIR RESERVASI SEWA ---");
@@ -151,34 +185,7 @@ public class Main {
             System.out.print("Tanggal selesai/kembali (YYYY-MM-DD): ");
             LocalDate selesai = LocalDate.parse(input.nextLine());
 
-            Map<Peralatan, Integer> keranjangItem = new LinkedHashMap<>();
-            boolean tambahLagi = true;
-            while (tambahLagi) {
-                tampilkanKatalog();
-                System.out.print("Pilih nomor alat yang ingin disewa: ");
-                int nomor = bacaInt();
-
-                if (nomor < 1 || nomor > katalog.jumlahPeralatan()) {
-                    System.out.println("Nomor alat tidak terdaftar.");
-                } else {
-                    Peralatan alat = katalog.getPeralatan(nomor - 1);
-                    if (!alat.isAktif()) {
-                        System.out.println("Alat sedang tidak aktif.");
-                    } else {
-                        System.out.print("Masukkan jumlah unit yang disewa: ");
-                        int jumlah = bacaInt();
-                        if (jumlah <= 0) {
-                            System.out.println("Jumlah unit harus lebih dari 0.");
-                        } else {
-                            keranjangItem.put(alat, keranjangItem.getOrDefault(alat, 0) + jumlah);
-                            System.out.println("Berhasil menambahkan " + alat.getNama() + " (" + jumlah + " unit) ke keranjang.");
-                        }
-                    }
-                }
-
-                System.out.print("Ingin tambah alat lain? (y/n): ");
-                tambahLagi = input.nextLine().equalsIgnoreCase("y");
-            }
+            Map<Peralatan, Integer> keranjangItem = pilihKeranjangBelanja();
 
             if (keranjangItem.isEmpty()) {
                 System.out.println("Reservasi dibatalkan karena belum ada alat yang dipilih.");
@@ -223,6 +230,8 @@ public class Main {
 
         } catch (DateTimeParseException e) {
             System.out.println("Format tanggal tidak valid. Mohon gunakan format YYYY-MM-DD.");
+        } catch (StokTidakCukupException | JadwalBentrokException e) {
+            System.out.println("Transaksi gagal: " + e.getMessage());
         } catch (IllegalArgumentException | IllegalStateException e) {
             System.out.println("Gagal membuat reservasi: " + e.getMessage());
         }
@@ -287,6 +296,30 @@ public class Main {
         }
     }
 
+    private static boolean periksaKondisiAlat(Sewa s, Map<ItemSewa, Kondisi> kondisiPerItem, Map<ItemSewa, Double> biayaPerbaikanPerItem) {
+        System.out.println("\n--- PEMERIKSAAN KONDISI ALAT ---");
+        for (ItemSewa item : s.getDaftarItem()) {
+            System.out.println("\nAlat: " + item.getPeralatan().getNama() + " (Jumlah: " + item.getJumlah() + ")");
+            System.out.println("Pilih Kondisi: 1. Baik (Normal) | 2. Rusak | 3. Hilang");
+            System.out.print("Masukkan pilihan kondisi (1/2/3): ");
+            int k = bacaInt();
+
+            if (k == 1) {
+                kondisiPerItem.put(item, Kondisi.BAIK);
+            } else if (k == 2) {
+                kondisiPerItem.put(item, Kondisi.RUSAK);
+                System.out.print("Masukkan biaya perbaikan alat: Rp ");
+                biayaPerbaikanPerItem.put(item, bacaDouble());
+            } else if (k == 3) {
+                kondisiPerItem.put(item, Kondisi.HILANG);
+            } else {
+                System.out.println("Pilihan kondisi tidak valid. Proses pemeriksaan dibatalkan.");
+                return false;
+            }
+        }
+        return true;
+    }
+
     private static void prosesPengembalian() {
         Sewa s = pilihSewa();
         if (s == null) return;
@@ -298,25 +331,9 @@ public class Main {
             Map<ItemSewa, Kondisi> kondisiPerItem = new LinkedHashMap<>();
             Map<ItemSewa, Double> biayaPerbaikanPerItem = new LinkedHashMap<>();
 
-            System.out.println("\n--- PEMERIKSAAN KONDISI ALAT ---");
-            for (ItemSewa item : s.getDaftarItem()) {
-                System.out.println("\nAlat: " + item.getPeralatan().getNama() + " (Jumlah: " + item.getJumlah() + ")");
-                System.out.println("Pilih Kondisi: 1. Baik (Normal) | 2. Rusak | 3. Hilang");
-                System.out.print("Masukkan pilihan kondisi (1/2/3): ");
-                int k = bacaInt();
-
-                if (k == 1) {
-                    kondisiPerItem.put(item, Kondisi.BAIK);
-                } else if (k == 2) {
-                    kondisiPerItem.put(item, Kondisi.RUSAK);
-                    System.out.print("Masukkan biaya perbaikan alat: Rp ");
-                    biayaPerbaikanPerItem.put(item, bacaDouble());
-                } else if (k == 3) {
-                    kondisiPerItem.put(item, Kondisi.HILANG);
-                } else {
-                    System.out.println("Pilihan kondisi tidak valid. Proses pemeriksaan dibatalkan.");
-                    return;
-                }
+            boolean pemeriksaanBerhasil = periksaKondisiAlat(s, kondisiPerItem, biayaPerbaikanPerItem);
+            if (!pemeriksaanBerhasil) {
+                return;
             }
 
             double totalDenda = sewaService.prosesPengembalian(s, aktual, kondisiPerItem, biayaPerbaikanPerItem);
@@ -330,6 +347,8 @@ public class Main {
 
         } catch (DateTimeParseException e) {
             System.out.println("Format tanggal tidak valid. Gunakan format YYYY-MM-DD.");
+        } catch (StokTidakCukupException e) {
+            System.out.println("Transaksi gagal: " + e.getMessage());
         } catch (IllegalArgumentException | IllegalStateException e) {
             System.out.println("Gagal memproses pengembalian: " + e.getMessage());
         }
@@ -341,8 +360,8 @@ public class Main {
             System.out.println("\n[Informasi] Belum ada riwayat penyewaan.");
         } else {
             System.out.println("\n========== SEMUA RIWAYAT PENYEWAAN ==========");
-            for (Sewa s : daftar) {
-                s.tampilkan();
+            for (Sewa sewa : daftar) {
+                sewa.tampilkan();
                 System.out.println("---------------------------------------------");
             }
         }
